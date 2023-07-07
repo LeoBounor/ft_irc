@@ -10,5 +10,6 @@
 # include "Command.hpp"
 
 std::string 				dateString(void);
+void						printMsg(std::string const &msg);
 
 #endif

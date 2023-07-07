@@ -26,19 +26,21 @@ class Server
 		int							_fd_socket;
 		bool						_running;
 		std::string					_server_name;
-		std::string					_server_time;
 		std::vector<pollfd> 		_pollfds;
 		std::vector<Channel *>		_channels;
 		std::map<size_t, Client *>	_clients;
-		CommandHandler				_command_handler;
+		CommandHandler				*_command_handler;
 
 	public:
 		Server(std::string const &port, std::string const &password);
 		~Server();
 		void						run();
-		void						close_server();
 		int							create_socket();
 		Channel 					*create_channel(std::string const &name, std::string const &password);
+		void						add_new_client();
+		int							handle_message(int fd);
+		void						handle_disconnect(int fd);
+		std::string					receive_data(int fd);
 		bool						is_running();
 		bool						hasPassword();
 		const std::string			getPassword();

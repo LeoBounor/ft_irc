@@ -11,6 +11,14 @@ class Channel
 		std::vector<Client *>	_users;
 
 	public:
+		Channel(std::string name, std::string password);
+		~Channel();
+		std::string getName();
+		std::string getPassword();
+		
+		void addUser(Client *user);
+		void removeUser(Client *user);
+		void kickUser(Client *kicker, Client *target, std::string reason);
 
 };
 

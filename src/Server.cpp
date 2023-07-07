@@ -6,7 +6,7 @@
 /*   By: Leo <Leo@student.42lyon.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/05 15:57:36 by Leo               #+#    #+#             */
-/*   Updated: 2023/07/05 19:09:19 by Leo              ###   ########lyon.fr   */
+/*   Updated: 2023/07/07 13:29:46 by Leo              ###   ########lyon.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,89 +18,89 @@ Server::Server(std::string const &port, std::string const &password) :
 	_fd_socket(this->create_socket()),
 	_running(1),
 	_server_name(DEFAULT_SERVER_NAME),
-	_server_time(dateString()),
 	_command_handler(new CommandHandler(this))
 {
-	// Initialise les membres de la classe
 }
 
 Server::~Server()
 {
-	// Effectuez la libération de mémoire ou la fermeture des ressources si nécessaire
+    std::vector<int> fds;
+
+    for (const auto& clientPair : _clients)
+        fds.push_back(clientPair.first);
+
+    for (int fd : fds)
+    {
+        _clients[fd]->msgReply("Arrêt du serveur\n");
+        handle_disconnect(fd);
+    }
+    for (Channel* channel : _channels)
+        delete channel;
+    delete _command_handler;
+    if (_fd_socket != -1)
+        close(_fd_socket);
+
+    printMsg("Server Closed");
 }
 
 void Server::run()
 {
-    // Ajout du socket du serveur dans le vecteur des pollfds
-	pollfd	server_fd = {this->_fd_socket, POLLIN, 0};
-    _pollfds.push_back(server_fd);
+    pollfd server_fd = { _fd_socket, POLLIN, 0 };
+	_pollfds.push_back(server_fd);
 
-    // Boucle principale du serveur
-    while (is_running())
-    {
-        // Attente des événements sur les sockets avec la fonction poll()
-        int pollResult = poll(_pollfds.data(), _pollfds.size(), -1);
-        if (pollResult == -1)
-        {
-            // Gestion de l'erreur lors de l'appel à poll()
-            perror("Erreur lors de l'appel à poll");
-            close_server();
-            exit(EXIT_FAILURE);
-        }
+	printMsg("Serveur en attente de connexions");
 
-        // Vérification des événements sur les sockets
-        for (size_t i = 0; i < _pollfds.size(); ++i)
-        {
-            if (_pollfds[i].revents & POLLIN)
-            {
-                if (_pollfds[i].fd == sockfd)
-                {
-                    // Nouvelle connexion entrante sur le socket du serveur
-                    int clientSockfd = accept(sockfd, nullptr, nullptr);
-                    if (clientSockfd == -1)
-                    {
-                        // Gestion de l'erreur lors de l'acceptation de la connexion
-                        perror("Erreur lors de l'acceptation de la connexion");
-                        continue;
-                    }
+	while (is_running())
+	{
+		// Attente des événements
+		if (poll(_pollfds.data(), _pollfds.size(), -1) < 0)
+			throw std::runtime_error("Erreur lors du polling");
 
-                    // Création d'un nouveau client et ajout dans la map des clients
-                    Client* newClient = new Client(clientSockfd);
-                    _clients[clientSockfd] = newClient;
-
-                    // Ajout du socket du client dans le vecteur des pollfds
-                    _pollfds.push_back({ clientSockfd, POLLIN, 0 });
-
-                    // Envoi du message de bienvenue au nouveau client
-                    newClient->sendWelcomeMessage();
-                }
-                else
-                {
-                    // Données disponibles à lire sur un socket client
-                    Client* client = _clients[_pollfds[i].fd];
-                    client->receiveData();
-                }
-            }
-            else if (_pollfds[i].revents & POLLHUP)
-            {
-                // Fermeture de la connexion sur un socket client
-                Client* client = _clients[_pollfds[i].fd];
-                client->closeConnection();
-
-                // Suppression du socket client des pollfds et de la map des clients
-                _pollfds.erase(_pollfds.begin() + i);
-                _clients.erase(_pollfds[i].fd);
-
-                // Décrémentation de l'index pour éviter les décalages
-                --i;
-            }
-        }
-    }
+		// Gestion des événements
+		for (std::vector<pollfd>::iterator it = _pollfds.begin(); it != _pollfds.end(); ++it)
+		{
+			// Pas d'événements
+			if (it->revents == 0)
+				continue;
+			// Connexion entrante
+			if ((it->revents & POLLIN) == POLLIN)
+			{
+				if (it->fd == _fd_socket)
+				{
+					add_new_client();
+					break;
+				}
+				if (handle_message(it->fd))
+					break;
+			}
+			// Déconnexion
+			if ((it->revents & POLLHUP) == POLLHUP)
+			{
+				handle_disconnect(it->fd);
+				break;
+			}
+		}
+	}
 }
 
-void Server::close_server()
+void Server::add_new_client()
 {
-	// Code pour fermer le serveur IRC
+	struct sockaddr_in clientAddr{};
+    socklen_t clientAddrLen = sizeof(clientAddr);
+	std::string	ip_addr;
+
+    // Accepter une nouvelle connexion
+    int clientSockfd = accept(_fd_socket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+    if (clientSockfd == -1)
+    {
+        perror("Erreur lors de l'acceptation de la connexion");
+        return;
+    }
+	ip_addr = inet_ntoa(clientAddr.sin_addr);
+    Client* newClient = new Client(clientSockfd, ip_addr, ntohs(clientAddr.sin_port));
+    _clients[clientSockfd] = newClient;
+    _pollfds.push_back({ clientSockfd, POLLIN, 0 });
+	printMsg(newClient->getNickname() + " vient de se connecter");
 }
 
 int Server::create_socket()
@@ -109,7 +109,6 @@ int Server::create_socket()
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
-        // Gestion de l'erreur lors de la création du socket
         perror("Erreur lors de la création du socket");
         exit(EXIT_FAILURE);
     }
@@ -117,13 +116,12 @@ int Server::create_socket()
     // Configuration de l'adresse et du port du serveur
     struct sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(std::stoi(_port)); // Conversion du port en entier
+    serverAddr.sin_port = htons(std::stoi(_port));
     serverAddr.sin_addr.s_addr = INADDR_ANY;
 
     // Liaison du socket à l'adresse et au port du serveur
     if (bind(sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1)
     {
-        // Gestion de l'erreur lors de la liaison du socket
         perror("Erreur lors de la liaison du socket");
         close(sockfd);
         exit(EXIT_FAILURE);
@@ -132,20 +130,80 @@ int Server::create_socket()
     // Mise en écoute du socket
     if (listen(sockfd, SOMAXCONN) == -1)
     {
-        // Gestion de l'erreur lors de la mise en écoute du socket
         perror("Erreur lors de la mise en écoute du socket");
         close(sockfd);
         exit(EXIT_FAILURE);
     }
-
-	// Retourne le descripteur de fichier du socket cré
     return sockfd;
+}
+
+int	Server::handle_message(int fd)
+{
+    Client*			client = _clients[fd];
+    std::string		message = this->receive_data(fd);
+
+    if (message.empty())
+    {
+        handle_disconnect(fd);
+        return (1);
+    }
+	// Code pour traiter le message
+	if (this->_command_handler->handle_command(client, message))
+	{
+		handle_disconnect(client->getFd());
+		return (1);
+	}
+    return (0);
+}
+
+std::string Server::receive_data(int fd)
+{
+	std::string		data;
+	const int		buffer_size = 1024;
+	char			buffer[buffer_size];
+	ssize_t			bytesRead = recv(fd, buffer, buffer_size - 1, 0);
+
+	if (bytesRead == -1)
+	{
+		perror("Erreur lors de la réception des données");
+		return data;
+	}
+	if (bytesRead == 0)
+		return data;
+	buffer[bytesRead] = '\0';
+	data = buffer;
+	return data;
+}
+
+void Server::handle_disconnect(int fd)
+{
+	close(fd);
+
+	// Suppression du client de la map _clients
+	auto it = _clients.find(fd);
+	if (it != _clients.end())
+	{
+		delete it->second;
+		_clients.erase(it);
+	}
+
+	// Suppression du file descriptor du client des pollfds
+	auto pollIt = std::find_if(_pollfds.begin(), _pollfds.end(), [fd](const pollfd& pfd) {
+		return pfd.fd == fd;
+	});
+	if (pollIt != _pollfds.end())
+	{
+		_pollfds.erase(pollIt);
+	}
 }
 
 Channel* Server::create_channel(std::string const &name, std::string const &password)
 {
-	// Code pour créer un nouveau canal avec le nom et le mot de passe spécifiés
-	// Retourne un pointeur vers le canal créé
+	if (getChannel(name) != nullptr)
+		return nullptr;
+	Channel* newChannel = new Channel(name, password);
+	_channels.push_back(newChannel);
+	return newChannel;
 }
 
 bool Server::is_running()
@@ -156,59 +214,62 @@ bool Server::is_running()
         // Vérification si le socket du serveur est en écoute
         struct pollfd pfd { _fd_socket, POLLIN, 0 };
         int pollResult = poll(&pfd, 1, 0);
-
         if (pollResult == -1)
         {
-            // Gestion de l'erreur lors de l'appel à poll()
             perror("Erreur lors de l'appel à poll");
             return false;
         }
-
         // Retourne true si le socket du serveur est en écoute, sinon false
         return (pfd.revents & POLLIN);
     }
-
     return false;
 }
 
 bool Server::hasPassword()
 {
-	// Code pour vérifier si le serveur a un mot de passe défini
-	// Retournez true si un mot de passe est défini, sinon false
+    return !_password.empty();
 }
 
 const std::string Server::getPassword()
 {
-	// Code pour obtenir le mot de passe du serveur
-	// Retournez le mot de passe du serveur
+    return _password;
 }
 
 const std::string Server::getServerName()
 {
-	// Code pour obtenir le nom du serveur
-	// Retournez le nom du serveur
+    return _server_name;
 }
 
 std::vector<Channel*> Server::getChannels()
 {
-	// Code pour obtenir la liste des canaux du serveur
-	// Retournez un vecteur contenant des pointeurs vers les canaux
+    return _channels;
 }
 
 Channel* Server::getChannel(std::string const &name)
 {
-	// Code pour obtenir un canal spécifique par son nom
-	// Retournez un pointeur vers le canal correspondant au nom spécifié
+    for (Channel* channel : _channels)
+    {
+        if (channel->getName() == name)
+            return channel;
+    }
+    return nullptr;
 }
 
 std::vector<Client*> Server::getClients()
 {
-	// Code pour obtenir la liste des clients connectés au serveur
-	// Retournez un vecteur contenant des pointeurs vers les clients
+    std::vector<Client*> clients;
+    for (const auto& clientPair : _clients)
+        clients.push_back(clientPair.second);
+    return clients;
 }
 
 Client* Server::getClient(std::string const &name)
 {
-	// Code pour obtenir un client spécifique par son nom
-	// Retournez un pointeur vers le client correspondant au nom spécifié
+    for (const auto& clientPair : _clients)
+    {
+        Client* client = clientPair.second;
+        if (client->getNickname() == name)
+            return client;
+    }
+    return nullptr;
 }

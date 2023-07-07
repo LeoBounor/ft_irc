@@ -6,7 +6,7 @@
 /*   By: Leo <Leo@student.42lyon.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/05 15:21:53 by Leo               #+#    #+#             */
-/*   Updated: 2023/07/05 15:59:51 by Leo              ###   ########lyon.fr   */
+/*   Updated: 2023/07/06 15:47:41 by Leo              ###   ########lyon.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@ int	main(int ac, char **av)
 			std::cout << "Usage: ./ft_irc <port> <password>" << std::endl;
 			return (1);
 		}
-		Server server(atoi(av[1]), av[2]);
+		Server server(av[1], av[2]);
 		server.run();
 	}
 	catch(const std::exception& e)

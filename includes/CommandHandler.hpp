@@ -12,7 +12,10 @@ class CommandHandler
 		std::map<std::string, Command *> 	_commands;
 	
 	public:
+		CommandHandler(Server *server);
+		~CommandHandler();
 
+		int 		handle_command(Client *client, std::string &line);
 };
 
 #endif
