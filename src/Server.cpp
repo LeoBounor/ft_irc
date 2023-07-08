@@ -6,7 +6,7 @@
 /*   By: Leo <Leo@student.42lyon.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/05 15:57:36 by Leo               #+#    #+#             */
-/*   Updated: 2023/07/07 13:29:46 by Leo              ###   ########lyon.fr   */
+/*   Updated: 2023/07/08 12:36:05 by Leo              ###   ########lyon.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ Server::~Server()
 
     for (int fd : fds)
     {
-        _clients[fd]->msgReply("Arrêt du serveur\n");
+        _clients[fd]->sendReply("Arrêt du serveur\n");
         handle_disconnect(fd);
     }
     for (Channel* channel : _channels)

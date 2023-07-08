@@ -37,8 +37,8 @@ class Client
 		void				setStatus(int status) { _status = status; }
 		void				setChannels(Channel *channels) { _channels = channels; }
 
-		void				send(std::string message);
-		void				msgReply(std::string message);
+		void				send(std::string const &message) const;
+		void				sendReply(std::string const &message);
 		void				welcome();
 		
 };
