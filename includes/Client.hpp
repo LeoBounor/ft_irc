@@ -40,7 +40,8 @@ class Client
 		void				send(std::string const &message) const;
 		void				sendReply(std::string const &message);
 		void				welcome();
-		
+		void				joinChannel(Channel *channel);
+		void				disconnect();
 };
 
 #endif

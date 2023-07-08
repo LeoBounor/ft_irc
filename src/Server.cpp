@@ -6,11 +6,11 @@
 /*   By: Leo <Leo@student.42lyon.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/05 15:57:36 by Leo               #+#    #+#             */
-/*   Updated: 2023/07/08 12:36:05 by Leo              ###   ########lyon.fr   */
+/*   Updated: 2023/07/08 18:53:37 by Leo              ###   ########lyon.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "ft_irc.hpp"
+#include "../includes/ft_irc.hpp"
 
 Server::Server(std::string const &port, std::string const &password) :
 	_port(port),
