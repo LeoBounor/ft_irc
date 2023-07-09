@@ -16,7 +16,7 @@ class Client
 		Channel			*_channels;
 
 	public:
-		Client(int fd, int port, std::string hostname);
+		Client(int fd, std::string hostname, int port);
 		~Client();
 		int					getFd() const { return _fd; }
 		int					getPort() const { return _port; }

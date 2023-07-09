@@ -6,13 +6,13 @@
 /*   By: Leo <Leo@student.42lyon.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/05 15:57:50 by Leo               #+#    #+#             */
-/*   Updated: 2023/07/08 19:44:34 by Leo              ###   ########lyon.fr   */
+/*   Updated: 2023/07/09 11:15:44 by Leo              ###   ########lyon.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/ft_irc.hpp"
 
-Client::Client(int fd, int port, std::string hostname)
+Client::Client(int fd, std::string hostname, int port)
     : _fd(fd), _port(port), _hostname(hostname), _status(0), _channels(nullptr)
 {
 }

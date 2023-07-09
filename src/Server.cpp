@@ -6,7 +6,7 @@
 /*   By: Leo <Leo@student.42lyon.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/05 15:57:36 by Leo               #+#    #+#             */
-/*   Updated: 2023/07/08 18:53:37 by Leo              ###   ########lyon.fr   */
+/*   Updated: 2023/07/09 11:14:44 by Leo              ###   ########lyon.fr   */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,7 +97,7 @@ void Server::add_new_client()
         return;
     }
 	ip_addr = inet_ntoa(clientAddr.sin_addr);
-    Client* newClient = new Client(clientSockfd, ip_addr, ntohs(clientAddr.sin_port));
+    Client *newClient = new Client(clientSockfd, ip_addr, ntohs(clientAddr.sin_port));
     _clients[clientSockfd] = newClient;
     _pollfds.push_back({ clientSockfd, POLLIN, 0 });
 	printMsg(newClient->getNickname() + " vient de se connecter");
